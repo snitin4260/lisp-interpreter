@@ -1,0 +1,22 @@
+{
+  "name": "lisp-interpreter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lisp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snitin8994/lisp-interpreter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/snitin8994/lisp-interpreter/issues"
+  },
+  "homepage": "https://github.com/snitin8994/lisp-interpreter#readme",
+  "devDependencies": {
+    "standard": "^12.0.1"
+  }
+}
