@@ -7,6 +7,7 @@ let globalEnv = {
   '+': (args) => args.reduce((a, b) => a + b),
   '-': (args) => args.reduce((a, b) => a - b),
   '/': (args) => args.reduce((a, b) => a / b),
+  '*': (args) => args.reduce((a, b) => a * b),
   '<': (x, y) => x < y,
   '>': (x, y) => x > y,
   '>=': (x, y) => x >= y,
@@ -14,31 +15,41 @@ let globalEnv = {
   '=': (x, y) => x === y
 }
 
-const sExpressionParser = input => {
-  input = spaceParser(input)
-  let noOfoperands = 0
-  if (input[0] !== '(') return null
-  let operation
+const mathParser = input => {
+  if (!(result = input.match(/^(\+|-|\/|\*)/))) return null
+  let operation = result[0]
+  input = spaceParser(input.slice(1))
   let operands = []
-  input = input.slice(1)
-  input = spaceParser(input)
-  result = globalEnv[input[0]]
-  if (!result) return null
-  operation = input[0]
+  while (input[0] !== ')') {
+    result = expressionParser(input)
+    if (!result) return null
+    operands.push(result[0])
+    input = result[1]
+    input = spaceParser(input)
+  }
+
+  return [globalEnv[operation](operands), input]
+}
+
+const sExpressionParser = input => {
+  if (input[0] !== '(') return null
+  let output
   input = input.slice(1)
   input = spaceParser(input)
   while (input[0] !== ')') {
     result = expressionParser(input)
     if (!result) return null
-    operands.push(result[0])
-    noOfoperands++
+    output = result[0]
     input = result[1]
-    input = spaceParser(input)
   }
-  if (noOfoperands <= 1) return null
-  return [globalEnv[operation](operands), input.slice(1)]
+  return [output, input.slice(1)]
 }
 
-const expressionParser = input => sExpressionParser(input) || numberParser(input)
+const expressionParser = input => {
+  input = spaceParser(input)
+  return sExpressionParser(input) || numberParser(input) || mathParser(input)
+}
 
-console.log(expressionParser('(+ 1 5 8 (+ 34 67) (+ 6 5) (- 123 ))'))
+console.log(expressionParser('(+ 1 5 8 (+ 345 67) (+ 6 5) (* 4 5) (- 123 67 ))'))
+
+//console.log(mathParser('+ )'))
