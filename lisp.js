@@ -89,6 +89,7 @@ const lambdaParser = input => {
   input = input.slice(1)
   localEnv.args = args
   localEnv.parent = globalEnv
+  localEnv.argsCallStack = []
   result = parseCode(input)
   if (!result) return null
   localEnv.body = result[0]
@@ -113,7 +114,7 @@ const defineParser = input => {
 
 const updateLambdaArgs = (func, input, env) => {
   let expressionResult; let funcKeys = Object.keys(globalEnv[func]['args'])
-  let index = 0
+  let index = 0; let result
 
   while (input[0] !== ')') {
     expressionResult = expressionParserEval(input, env)
@@ -122,15 +123,23 @@ const updateLambdaArgs = (func, input, env) => {
     index++
     input = spaceParser(expressionResult[1])
   }
+
   // used for identfying the function from args environment
   // so we get access to parent
   globalEnv[func]['args']['__func__'] = globalEnv[func]
+  globalEnv[func]['argsCallStack'].push(Object.assign({}, globalEnv[func]['args']))
   input = input.slice(1)
-  return [lambdaEval(func),input]
+
+  result = [lambdaEval(func), input]
+  globalEnv[func]['argsCallStack'].pop()
+
+  return result
 }
 
 const lambdaEval = (func) => {
-  let result = expressionParserEval(globalEnv[func]['body'], globalEnv[func]['args'])
+  let callStackLastItemIndex = globalEnv[func]['argsCallStack'].length - 1
+  let result = expressionParserEval(globalEnv[func]['body'], globalEnv[func]['argsCallStack'][callStackLastItemIndex])
+  // console.log(result[1])
   return result[0]
 }
 
@@ -246,14 +255,17 @@ const expressionParserEval = (input, env = globalEnv) => {
 // console.log(expressionParserEval('(define oops 50)'))
 // console.log(expressionParserEval('(plus 30 (plus 5 6))'))
 
-// console.log(expressionParserEval('( if (> 30 25) (+ 45 56) oops)'))
+// console.log(expressionParserEval('( if (> 30 45) (+ 45 56) oops)'))
 // console.log(expressionParserEval('(if (= 12 13) (+ 78 2) 9)'))
 
 // console.log(expressionParserEval(('(define circle_area ( lambda (r) (* pi r r)))')))
-// console.log(expressionParserEval('(circle_area 91)'))
+// console.log(expressionParserEval('(circle_area 156 )'))
 // console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
-// console.log(expressionParserEval('(fact 67)'))
+// console.log(expressionParserEval('(fact 5)'))
 // console.log(expressionParserEval('(quote ())'))
 
-console.log(expressionParserEval('(define fib ( lambda (n) (if (< n 2) 1 (+ (fib (- n 1) ) (fib (- n 2) )))))'))
-console.log(expressionParserEval('(fib 3)'))
+// console.log(expressionParserEval('(define twice (lambda (x) (* 2 x)))'))
+// console.log(expressionParserEval('(circle_area (twice 78))'))
+
+// console.log(expressionParserEval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1) ) (fib (- n 2) )))))'))
+// console.log(expressionParserEval('(fib 35)'))
