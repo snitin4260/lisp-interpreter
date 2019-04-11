@@ -17,10 +17,12 @@ let globalEnv = {
   '>=': (arr) => arr[0] >= arr[1],
   '<=': (arr) => arr[0] <= arr[1],
   '=': (arr) => arr[0] === arr[1],
-  'pi': Math.PI
+  'pi': Math.PI,
+  'sqrt': (input) => Math.sqrt(input)
 }
 
 const ifParser = (input, env = globalEnv) => {
+  if (!input.startsWith('if')) return null
   let condition; let result
   input = spaceParser(input.slice(2))
   result = sExpressionParser(input, env)
@@ -46,6 +48,8 @@ const ifParser = (input, env = globalEnv) => {
 
 const quoteParser = input => {
   let result
+  if (!input.startsWith('quote')) return null
+  input = input.slice(5)
   input = spaceParser(input)
   if (input[0] !== '(') {
     result = ''
@@ -75,6 +79,8 @@ const quoteParser = input => {
 
 const lambdaParser = input => {
   let result
+  if (!input.startsWith('lambda')) return null
+  input = input.slice(6)
   input = spaceParser(input)
   if (input[0] !== '(') return null
   input = spaceParser(input.slice(1))
@@ -100,6 +106,8 @@ const lambdaParser = input => {
 
 const defineParser = input => {
   let result
+  if (!input.startsWith('define')) return null
+  input = input.slice(6)
   input = spaceParser(input)
   result = symbolParser(input)
   if (!result) return null
@@ -109,7 +117,17 @@ const defineParser = input => {
   input = spaceParser(value[1])
   if (input[0] !== ')') return null
   globalEnv[identifier] = value[0]
-  return [identifier, spaceParser(value[1])]
+  return [identifier, spaceParser(value[1]).slice(1)]
+}
+
+const beginParser = (input, env) => {
+  if (!input.startsWith('begin')) return null
+  input = input.slice(5)
+  while (input[0] !== ')') {
+    result = expressionParserEval(input, env)
+    input = spaceParser(result[1])
+  }
+  return [result[0], input.slice(1)]
 }
 
 const updateLambdaArgs = (func, input, env) => {
@@ -123,13 +141,11 @@ const updateLambdaArgs = (func, input, env) => {
     index++
     input = spaceParser(expressionResult[1])
   }
-
   // used for identfying the function from args environment
   // so we get access to parent
   globalEnv[func]['args']['__func__'] = globalEnv[func]
   globalEnv[func]['argsCallStack'].push(Object.assign({}, globalEnv[func]['args']))
   input = input.slice(1)
-
   result = [lambdaEval(func), input]
   globalEnv[func]['argsCallStack'].pop()
 
@@ -139,64 +155,41 @@ const updateLambdaArgs = (func, input, env) => {
 const lambdaEval = (func) => {
   let callStackLastItemIndex = globalEnv[func]['argsCallStack'].length - 1
   let result = expressionParserEval(globalEnv[func]['body'], globalEnv[func]['argsCallStack'][callStackLastItemIndex])
-  // console.log(result[1])
   return result[0]
+}
+
+const globalEnvParser = (input, env) => {
+  let args = []
+  let firstEmptyspaceIndex = input.indexOf(' ')
+  let textChar = input.slice(0, firstEmptyspaceIndex)
+  if (!globalEnv[textChar]) return null
+  if (typeof globalEnv[textChar] === 'object') {
+    input = spaceParser(input.slice(firstEmptyspaceIndex))
+    result = updateLambdaArgs(textChar, input, env)
+    return result
+  }
+  let operation = textChar
+  input = spaceParser(input.slice(firstEmptyspaceIndex))
+  // parse the arguments
+  while (input[0] !== ')') {
+    result = expressionParserEval(input, env)
+    if (!result) return null
+    args.push(result[0])
+    input = spaceParser(result[1])
+  }
+  return [globalEnv[operation](args), input.slice(1)]
 }
 
 const sExpressionParser = (input, env = globalEnv) => {
   let result
   if (input[0] !== '(') return null
-  let args = []
-  input = input.slice(1)
-  input = spaceParser(input)
-  if (input.startsWith('define')) {
-    input = input.slice(6)
-    result = defineParser(input)
-    if (!result) return null
-    return [result[0], result[1].slice(1)]
-  } else if (input.startsWith('begin')) {
-    input = input.slice(5)
-    while (input[0] !== ')') {
-      result = expressionParserEval(input, env)
-      input = spaceParser(result[1])
-    }
-    return [result[0], input.slice(1)]
-  } else if (input.startsWith('if')) {
-    result = ifParser(input, env)
-    return [result[0], result[1]]
-  } else if (input.startsWith('quote')) {
-    input = input.slice(5)
-    result = quoteParser(input)
-    if (!result) return null
-    return [result[0], result[1]]
-  } else if (input.startsWith('lambda')) {
-    input = input.slice(6)
-    result = lambdaParser(input)
-    if (!result) return null
-    return [result[0], result[1]]
-  } else {
-    let firstEmptyspaceIndex = input.indexOf(' ')
-    let textChar = input.slice(0, firstEmptyspaceIndex)
-    if (!globalEnv[textChar]) return null
-    if (typeof globalEnv[textChar] === 'object') {
-      input = spaceParser(input.slice(firstEmptyspaceIndex))
-      result = updateLambdaArgs(textChar, input, env)
-
-      return result
-
-      // should return a value
-    }
-    let operation = textChar
-    input = spaceParser(input.slice(firstEmptyspaceIndex))
-    // parse the arguments
-    while (input[0] !== ')') {
-      result = expressionParserEval(input, env)
-      if (!result) return null
-      args.push(result[0])
-      input = spaceParser(result[1])
-    }
-    return [globalEnv[operation](args), input.slice(1)]
+  input = spaceParser(input.slice(1))
+  let parsers = [defineParser, beginParser, ifParser, quoteParser, lambdaParser, globalEnvParser]
+  for (let parser of parsers) {
+    result = parser(input, env)
+    if (result) return result
   }
+  return null
 }
 
 const parseCode = input => {
@@ -247,7 +240,7 @@ const expressionParserEval = (input, env = globalEnv) => {
 // console.log(expressionParserEval('(+ 45 67 (+ 1 1))'))
 // console.log(expressionParserEval('(define define 90)'))
 // console.log(expressionParserEval('(define define 90)'))
-// // console.log(expressionParserEval('(+ define 40)'))
+// console.log(expressionParserEval('(+ define 40)'))
 // console.log(expressionParserEval('(define define define)'))
 // //console.log(expressionParserEval('(* (+ r define) 78  67)'))
 // console.log(expressionParserEval('define'))
@@ -256,16 +249,15 @@ const expressionParserEval = (input, env = globalEnv) => {
 // console.log(expressionParserEval('(plus 30 (plus 5 6))'))
 
 // console.log(expressionParserEval('( if (> 30 45) (+ 45 56) oops)'))
-// console.log(expressionParserEval('(if (= 12 13) (+ 78 2) 9)'))
+// console.log(expressionParserEval('(if (= 12 12) (+ 78 2) 9)'))
 
-// console.log(expressionParserEval(('(define circle_area ( lambda (r) (* pi r r)))')))
-// console.log(expressionParserEval('(circle_area 156 )'))
+// console.log(expressionParserEval('(define circle_area ( lambda (r) (* pi r r)))'))
+// console.log(expressionParserEval('(circle_area 3 )'))
 // console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
 // console.log(expressionParserEval('(fact 5)'))
 // console.log(expressionParserEval('(quote ())'))
-
-// console.log(expressionParserEval('(define twice (lambda (x) (* 2 x)))'))
-// console.log(expressionParserEval('(circle_area (twice 78))'))
-
+// console.log(expressionParserEval('(define twice (lambda (x) (* 2 x) ) )'))
+// console.log(expressionParserEval('(twice (+ 78 9) )'))
 // console.log(expressionParserEval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1) ) (fib (- n 2) )))))'))
-// console.log(expressionParserEval('(fib 35)'))
+// console.log(expressionParserEval('(fib (sqrt 49) )'))
+// console.log(expressionParserEval('(sqrt 49 )'))
