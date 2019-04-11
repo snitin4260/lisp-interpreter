@@ -59,22 +59,12 @@ const quoteParser = input => {
     }
     return [result, input.slice(1)]
   }
-  result = ''
-  let count = 0
-  while (count >= 0) {
-    if (input[0] === '(') count++
-    if (input[0] === ')') count--
-    if (count === 0) {
-      result = result + ')'
-      input = input.slice(1)
-      input = spaceParser(input)
-      if (input[0] !== ')') return null
-      return [result, input.slice(1)]
-    }
-    result = result + input[0]
-    input = input.slice(1)
-  }
-  return null
+
+  result = parseCode(input)
+  if (!result) return null
+  input = spaceParser(result[1])
+  if (input[0] !== ')') return null
+  return [result[0], result[1].slice(1)]
 }
 
 const lambdaParser = input => {
@@ -255,9 +245,11 @@ const expressionParserEval = (input, env = globalEnv) => {
 // console.log(expressionParserEval('(circle_area 3 )'))
 // console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
 // console.log(expressionParserEval('(fact 5)'))
-// console.log(expressionParserEval('(quote ())'))
+// console.log(expressionParserEval('(quote (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1)))))) )'))
 // console.log(expressionParserEval('(define twice (lambda (x) (* 2 x) ) )'))
 // console.log(expressionParserEval('(twice (+ 78 9) )'))
 // console.log(expressionParserEval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1) ) (fib (- n 2) )))))'))
-// console.log(expressionParserEval('(fib (sqrt 49) )'))
+// console.log(expressionParserEval('(fib 9 )'))
 // console.log(expressionParserEval('(sqrt 49 )'))
+// console.log(expressionParserEval('(define triplet (lambda (x y z) (+ x (* y z) ) ) )'))
+// console.log(expressionParserEval('(triplet (sqrt 49) 6 7)'))
