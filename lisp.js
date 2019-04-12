@@ -1,3 +1,4 @@
+const readline = require('readline')
 let result
 const numberParser = input => (result = input.match(/^-?(0|([1-9][0-9]*))(\.[0-9]+)?([E][+-]?[0-9]+)?/i)) && [result[0] * 1, input.slice(result[0].length)]
 const spaceParser = input => input.replace(/^\s+/, '')
@@ -221,6 +222,17 @@ const expressionParserEval = (input, env = globalEnv) => {
   return null
 }
 
+let rl = readline.createInterface(process.stdin, process.stdout)
+rl.setPrompt('lispy> ')
+rl.prompt()
+rl.on('line', function (line) {
+  if (line === 'quit') rl.close()
+  console.log(expressionParserEval(line))
+  rl.prompt()
+}).on('close', function () {
+  process.exit(0)
+})
+
 // console.log(expressionParserEval('(* pi 56 72)'))
 // console.log(expressionParserEval('(begin (* 86 76) (* 65 45) (define twice (lambda (x) (* 2 x) ) ) (twice (+ 78 9) ) )'))
 //  console.log(expressionParserEval('(/ 90 0)'))
@@ -241,8 +253,8 @@ const expressionParserEval = (input, env = globalEnv) => {
 
 // console.log(expressionParserEval('(define circle_area ( lambda (r) (* pi r r)))'))
 // console.log(expressionParserEval('(circle_area 3 )'))
-console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
-console.log(expressionParserEval('(fact 12)'))
+// console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
+// console.log(expressionParserEval('(fact 15)'))
 
 // console.log(expressionParserEval('(quote (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1)))))) )'))
 // console.log(expressionParserEval('(define twice (lambda (x) (* 2 x) ) )'))
