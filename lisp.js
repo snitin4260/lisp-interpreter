@@ -59,7 +59,6 @@ const quoteParser = input => {
     }
     return [result, input.slice(1)]
   }
-
   result = parseCode(input)
   if (!result) return null
   input = spaceParser(result[1])
@@ -211,20 +210,19 @@ const parseCode = input => {
 const expressionParserEval = (input, env = globalEnv) => {
   input = spaceParser(input)
   if ((result = sExpressionParser(input, env))) return [result[0], result[1]]
-  else if ((result = numberParser(input))) return [result[0], result[1]]
-  else if ((result = symbolParser(input))) {
-    if (!env[result[0]] && env['__func__']) {
-      if (env['__func__']['parent'][result[0]] !== undefined) {
-        return [env['__func__']['parent'][result[0]], result[1]]
-      }
-    } else if (!env[result[0]] && !env['__func__']) return null
+  if ((result = numberParser(input))) return [result[0], result[1]]
+  if ((result = symbolParser(input))) {
+    if (!env[result[0]] && env['__func__'] && env['__func__']['parent'][result[0]] !== undefined) {
+      return [env['__func__']['parent'][result[0]], result[1]]
+    }
+    if (!env[result[0]] && !env['__func__']) return null
     return [env[result[0]], result[1]]
   }
   return null
 }
 
 // console.log(expressionParserEval('(* pi 56 72)'))
-// console.log(expressionParserEval('(begin (* 86 76) (* 65 45) ( quote (+78 67 (* 78 67))) ) '))
+// console.log(expressionParserEval('(begin (* 86 76) (* 65 45) (define twice (lambda (x) (* 2 x) ) ) (twice (+ 78 9) ) )'))
 //  console.log(expressionParserEval('(/ 90 0)'))
 
 // console.log(expressionParserEval('(+ 45 67 (+ 1 1))'))
@@ -243,13 +241,14 @@ const expressionParserEval = (input, env = globalEnv) => {
 
 // console.log(expressionParserEval('(define circle_area ( lambda (r) (* pi r r)))'))
 // console.log(expressionParserEval('(circle_area 3 )'))
-// console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
-// console.log(expressionParserEval('(fact 5)'))
+console.log(expressionParserEval('(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))'))
+console.log(expressionParserEval('(fact 12)'))
+
 // console.log(expressionParserEval('(quote (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1)))))) )'))
 // console.log(expressionParserEval('(define twice (lambda (x) (* 2 x) ) )'))
 // console.log(expressionParserEval('(twice (+ 78 9) )'))
 // console.log(expressionParserEval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1) ) (fib (- n 2) )))))'))
-// console.log(expressionParserEval('(fib 9 )'))
+// console.log(expressionParserEval('(fib 10 )'))
 // console.log(expressionParserEval('(sqrt 49 )'))
 // console.log(expressionParserEval('(define triplet (lambda (x y z) (+ x (* y z) ) ) )'))
 // console.log(expressionParserEval('(triplet (sqrt 49) 6 7)'))
